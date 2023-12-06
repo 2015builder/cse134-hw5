@@ -1,10 +1,128 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Hmwk5</title>
+    <title>Rating Widget</title>
+    <style>
+        rating-widget{
+            --star-unselected-color: gold;
+            --star-selected-color: orange;
+        }
+    </style>
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            const basicForm = document.querySelector('.rating-form');
+            if (basicForm) {
+                basicForm.style.display = 'none';
+            }
+        });
+        class RatingWidget extends HTMLElement {
+            constructor() {
+                super();
+                this.attachShadow({ mode: 'open' });
+                this.maxStars = 5; // Default value
+                this.rating = 0;
+            }
+
+            connectedCallback() {
+                this.maxStars = this.getAttribute('max') || 5;
+                if (this.maxStars > 10){
+                    this.maxStars = 10
+                }
+                if (this.maxStars < 3){
+                    this.maxStars = 3
+                }
+                this.render();
+
+                const form = this.shadowRoot.querySelector('form');
+                form.addEventListener('submit', event => {
+                    event.preventDefault();
+                    const formData = new FormData(form)
+                    fetch(form.action, {
+                        method: 'POST',
+                        headers: {
+                            'X-Sent-By': 'JavaScript'
+                        },
+                        body: formData
+                    })
+                        .then(response => response.json())
+                        .then(data => console.log(data))
+                        .catch(error => console.error('Error: ', error))
+                })
+            }
+
+            render() {
+                let starsHtml = '';
+                for (let i = 1; i <= this.maxStars; i++) {
+                    starsHtml += `<span class="star" data-value="${i}">&#9733;</span>`;
+                }
+
+                this.shadowRoot.innerHTML = `
+                    <style>
+                        .star {
+                            color: var(--star-unselected-color, gold);
+                            font-size: 24px;
+                        }
+                        .star:hover {
+                            color: var(--star-selected-color, orange);
+                        }
+                    </style>
+
+                    <form action="https://httpbin.org/post" method="post">
+                    <div>
+                        ${starsHtml}
+                    </div>
+
+                    <input type="hidden" name="question" value="How satisfied are you?">
+                    <input type="hidden" name="sentBy" value="JS">
+                    <input type="hidden" id="rating" name="rating" min="1" max=` + this.maxStars + ` value="0" required>
+
+                    </form>
+                    <p id="message"></p>
+                `;
+
+                this.shadowRoot.querySelectorAll('.star').forEach(star => {
+                    star.addEventListener('click', this.setRating.bind(this));
+                });
+            }
+
+            setRating(event) {
+                this.rating = event.target.dataset.value;
+                this.updateMessage();
+
+                // hide the stars
+                const starsContainer = this.shadowRoot.querySelector('div');
+                starsContainer.style.display = 'none';
+
+                const ratingInput = this.shadowRoot.querySelector('#rating');
+                ratingInput.value = this.rating;
+
+                const form = this.shadowRoot.querySelector('form')
+                form.dispatchEvent(new Event('submit'));
+
+            }
+
+            updateMessage() {
+                const messageElement = this.shadowRoot.querySelector('#message');
+                if (this.rating / this.maxStars >= 0.8) {
+                    messageElement.textContent = 'Thanks for ' + this.rating + ' star rating!';
+                } else {
+                    messageElement.textContent = 'Thank you for you feedback of ' + this.rating + " stars. We'll try to do better!";
+                }
+            }
+        }
+
+        customElements.define('rating-widget', RatingWidget);
+    </script>
 </head>
 <body>
-
+<h1>Rating Widget</h1>
+<form action="https://httpbin.org/post" method="POST" class="rating-form">
+    <label for="rating">How satisfied are you?</label>
+    <input type="hidden" name="question" value="How satisfied are you?">
+    <input type="hidden" name="sentBy" value="HTML">
+    <input type="number" id="rating" name="rating" min="1" max="5" value="0" required>
+    <button type="submit">Submit</button>
+</form>
+<rating-widget max="5"></rating-widget>
 </body>
 </html>
