@@ -19,7 +19,7 @@
             constructor() {
                 super();
                 this.attachShadow({ mode: 'open' });
-                this.maxStars = 5; // Default value
+                this.maxStars = 5;
                 this.rating = 0;
             }
 
@@ -60,7 +60,7 @@
                     <style>
                         .star {
                             color: var(--star-unselected-color, gold);
-                            font-size: 24px;
+                            font-size: 2em;
                         }
                         .star:hover {
                             color: var(--star-selected-color, orange);

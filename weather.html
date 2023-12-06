@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Weather Widget</title>
+    <script>
+      class WeatherWidget extends HTMLElement {
+          constructor() {
+              super();
+              this.attachShadow({mode: 'open'})
+              this.temperature = 0;
+              this.temperatureUnit = 'F';
+              this.shortForecast = 'No information available';
+              this.icon = null;
+
+              this.lat = '32.881';
+              this.lon = '-117.241';
+          }
+
+          connectedCallback() {
+              this.render()
+              this.displayWeatherData();
+          }
+
+          render() {
+
+              this.shadowRoot.innerHTML = `
+                <style>
+                    #weather-container{
+                    display: flex;
+                    align-items: center;
+                    }
+                    #icon{
+                    max-width: 50px;
+                    max-height: 50px;
+                    margin-right: 10px;
+                    }
+                    #shortForecast {
+                    font-size: 2em;
+                    }
+                </style>
+                <h1>Current Weather</h1>
+                <div id="weather-container">
+                    <img src='' id=icon alt="Icon for the current weather">
+                    <p id="shortForecast"></p>
+                </div>
+            `;
+          }
+
+          async displayWeatherData() {
+              const { gridX, gridY, office } = await this.getGridCoordinates(this.lat, this.lon);
+              console.log('got basic info', gridX, gridY, office);
+
+              const weatherData = await this.getWeatherData(gridX, gridY, office);
+              console.log('full weather data', weatherData);
+
+              this.icon = weatherData.properties.periods[0].icon
+              this.shortForecast = weatherData.properties.periods[0].shortForecast
+              this.temperature = weatherData.properties.periods[0].temperature
+              this.temperatureUnit = weatherData.properties.periods[0].temperatureUnit
+              console.log(this.shortForecast, this.temperature, this.temperatureUnit)
+
+              const shortForecastInput = this.shadowRoot.querySelector('#shortForecast')
+              shortForecastInput.textContent = this.shortForecast + ' ' + this.temperature + '°' + this.temperatureUnit
+
+              const iconImage = this.shadowRoot.querySelector('#icon');
+              iconImage.src = this.icon;
+
+
+              // have to integrate the different weather
+              // Sunny, Mostly Clear, Patchy Fog, Partly Sunny,
+              // Clear, Mostly Sunny, Partly Cloudy
+          }
+
+          getGridCoordinates(lat, lon) {
+              return fetch(`https://api.weather.gov/points/${lat},${lon}`)
+                  .then(response => response.json())
+                  .then(data => {
+                      return {
+                          gridX: data.properties.gridX,
+                          gridY: data.properties.gridY,
+                          office: data.properties.gridId
+                      };
+                  });
+          }
+
+          getWeatherData(gridX, gridY, office) {
+              const url = `https://api.weather.gov/gridpoints/${office}/${gridX},${gridY}/forecast`;
+              return fetch(url)
+                  .then(response => response.json())
+                  .then(data => {
+                      // get temperature, temperatureUnit, icon, shortForecast
+                      console.log(data)
+                      return data;
+                  });
+          }
+      }
+
+      customElements.define('weather-widget', WeatherWidget);
+    </script>
+</head>
+<body>
+<weather-widget></weather-widget>
+<noscript>
+    <h1>Current Weather</h1>
+  <p>Current Weather Conditions Unavailable</p>
+</noscript>
+</body>
+</html>
